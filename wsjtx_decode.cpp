@@ -12,11 +12,11 @@ extern "C" {
 
 void wsjtx_decoded_(int *nutc, int *snr, float *dt, int *freq, char *decoded, int len)
 	{
-		char message[23];
+		char message[38];
 
-		std::strncpy(message, decoded, 22);
-		message[22] = '\0';
-		for (int i = 22; i != 0; i--)
+		std::strncpy(message, decoded, 37);
+		message[37] = '\0';
+		for (int i = 37; i != 0; i--)
 		{
 			if (message[i] == ' ' || message[i] == '\0')
 				message[i] = '\0';
