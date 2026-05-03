@@ -34,7 +34,7 @@ contains
 
   subroutine decode(this,callback,iwave,nQSOProgress,nfqso,nftx,newdat,  &
        nutc,nfa,nfb,nzhsym,ndepth,emedelay,ncontest,nagain,lft8apon,     &
-       lapcqonly,napwid,mycall12,hiscall12,ldiskdat)
+       ltry_a8,lapcqonly,napwid,mycall12,hiscall12,hisgrid,ldiskdat)
     use iso_c_binding, only: c_bool, c_int
     use timer_module, only: timer
     use shmem, only: shmem_lock, shmem_unlock
@@ -44,23 +44,25 @@ contains
 
     class(ft8_decoder), intent(inout) :: this
     procedure(ft8_decode_callback) :: callback
-    parameter (MAXCAND=600,MAX_EARLY=100)
+    parameter (MAXCAND=1000,MAX_EARLY=200,NPTS=15*12000)
     real*8 tsec,tseq
     real sbase(NH1)
     real candidate(3,MAXCAND)
-    real dd(15*12000),dd1(15*12000)
+    real dd(NPTS),dd1(NPTS)
     logical, intent(in) :: lft8apon,lapcqonly,nagain
-    logical newdat,lsubtract,ldupe,lrefinedt
+    logical newdat,lsubtract,ldupe,lrefinedt,ltry_a8
     logical*1 ldiskdat
     logical lsubtracted(MAX_EARLY)
+    logical la8
     character*12 mycall12,hiscall12,call_1,call_2
+    character*6 hisgrid
     character*4 grid4
-    integer*2 iwave(15*12000)
+    integer*2 iwave(NPTS)
     integer apsym2(58),aph10(10)
     character datetime*13,msg37*37
-    character*37 allmessages(200)
+    character*37 allmessages(MAX_EARLY)
     character*12 ctime
-    integer allsnrs(200)
+    integer allsnrs(MAX_EARLY)
     integer itone(NN)
     integer itone_save(NN,MAX_EARLY)
     real f1_save(MAX_EARLY)
@@ -69,24 +71,27 @@ contains
 
     save dd,dd1,nutc0,ndec_early,itone_save,f1_save,xdt_save,lsubtracted,  &
          allmessages
-    
     this%callback => callback
     write(datetime,1001) nutc        !### TEMPORARY ###
 1001 format("000000_",i6.6)
 
+    la8=.true.
+    if(nzhsym .eq. 41) jseq=mod(nutc/5,2)
     if(nutc0.eq.-1) then
        msg0=' '
        dt0=0.
        f0=0.
     endif
-!Added 41==nzhsym to force a reset if the same wav file is processed twice or more in a row,
-!in which case nutc.eq.nutc0 and ndec(jseq,1) doesn't get reset
+
+! Added 41==nzhsym to force a reset if the same wav file is processed twice or
+! more in a row, in which case nutc.eq.nutc0 and ndec(jseq,1) doesn't get reset
     if(nzhsym==41 .or. (nutc.ne.nutc0)) then
 ! New UTC.  Move previously saved 'a7' data from k=1 to k=0
        iz=ndec(jseq,1)
        dt0(1:iz,jseq,0)  = dt0(1:iz,jseq,1)
        f0(1:iz,jseq,0)   = f0(1:iz,jseq,1)
        msg0(1:iz,jseq,0) = msg0(1:iz,jseq,1)
+
        ndec(jseq,0)=iz
        ndec(jseq,1)=0
        nutc0=nutc
@@ -101,7 +106,6 @@ contains
     if(ndepth.eq.1 .and. nzhsym.eq.50) then
        dd=iwave
     endif
-
     call ft8apset(mycall12,hiscall12,ncontest,apsym2,aph10)
 
     if(nzhsym.le.47) then
@@ -170,29 +174,30 @@ contains
 ! ndepth=2: subtraction, 3 passes, bp+osd (no subtract refinement) 
 ! ndepth=3: subtraction, 3 passes, bp+osd
     npass=3
+    imetric=1
     if(ndepth.eq.1) npass=2
     do ipass=1,npass
       newdat=.true.
       syncmin=1.3
-      if(ndepth.le.2) syncmin=1.6
-      if(nzhsym.eq.41) syncmin=2.0
+      if(ndepth.le.2) syncmin=2.1
+!      if(nzhsym.eq.41) syncmin=2.0
       if(ipass.eq.1) then
         lsubtract=.true.
-        ndeep=ndepth
-        if(ndepth.eq.3) ndeep=2
+        imetric=1
       elseif(ipass.eq.2) then
         n2=ndecodes
-        if(ndecodes.eq.0) cycle
+        imetric=2
+!        if(ndecodes.eq.0) imetric=2 
         lsubtract=.true.
-        ndeep=ndepth
       elseif(ipass.eq.3) then
-        if((ndecodes-n2).eq.0) cycle
+        imetric=2
+!        if((ndecodes-n2).eq.0) cycle
+        if(ndecodes.eq.0) cycle
         lsubtract=.true. 
-        ndeep=ndepth
       endif 
       call timer('sync8   ',0)
       maxc=MAXCAND
-      call sync8(dd,ifa,ifb,syncmin,nfqso,maxc,candidate,ncand,sbase)
+      call sync8(dd,NPTS,ifa,ifb,syncmin,nfqso,maxc,candidate,ncand,sbase)
       call timer('sync8   ',1)
       do icand=1,ncand
         sync=candidate(3,icand)
@@ -201,8 +206,8 @@ contains
         xbase=10.0**(0.1*(sbase(nint(f1/3.125))-40.0))
         msg37='                                     '
         call timer('ft8b    ',0)
-        call ft8b(dd,newdat,nQSOProgress,nfqso,nftx,ndeep,nzhsym,lft8apon,  &
-             lapcqonly,napwid,lsubtract,nagain,ncontest,iaptype,mycall12,   &
+        call ft8b(dd,newdat,nQSOProgress,nfqso,nftx,ndepth,nzhsym,lft8apon,  &
+             lapcqonly,napwid,lsubtract,nagain,ncontest,imetric,iaptype,mycall12,   &
              hiscall12,f1,xdt,xbase,apsym2,aph10,nharderrors,dmin,          &
              nbadcrc,iappass,msg37,xsnr,itone)
         call timer('ft8b    ',1)
@@ -215,6 +220,9 @@ contains
               if(msg37.eq.allmessages(id)) ldupe=.true.
            enddo
            if(.not.ldupe) then
+              if(ndecodes.ge.MAX_EARLY) then
+                cycle
+              endif
               ndecodes=ndecodes+1
               allmessages(ndecodes)=msg37
               allsnrs(ndecodes)=nsnr
@@ -226,7 +234,7 @@ contains
               qual=1.0-(nharderrors+dmin)/60.0 ! scale qual to [0.0,1.0]
               if(emedelay.ne.0) xdt=xdt+2.0
               call this%callback(sync,nsnr,xdt,f1,msg37,iaptype,qual)
-              call ft8_a7_save(nutc,xdt,f1,msg37)  !Enter decode in table
+              call ft8_a7_save(jseq,xdt,f1,msg37)  !Enter decode in table
            endif
         endif
         call timestamp(tsec,tseq,ctime)
@@ -239,7 +247,9 @@ contains
    if(nzhsym.lt.50) ndec_early=ndecodes
    
 900 continue
-   if(lft8apon .and. ncontest.ne.6 .and. ncontest.ne.7 .and. nzhsym.eq.50 .and. ndec(jseq,0).ge.1) then
+
+   if(lft8apon .and. ncontest.ne.6 .and. ncontest.ne.7 .and. nzhsym.eq.50 .and. &
+        ndec(jseq,0).ge.1) then
       newdat=.true.
       do i=1,ndec(jseq,0)
          if(f0(i,jseq,0).eq.-99.0) exit
@@ -267,11 +277,34 @@ contains
                nsnr=xsnr
                iaptype=7
                qual=1.0
+               if(index(msg37,trim(hiscall12)).gt.0) la8=.false.
                call this%callback(sync,nsnr,xdt,f1,msg37,iaptype,qual)
-               call ft8_a7_save(nutc,xdt,f1,msg37)  !Enter decode in table
+               call ft8_a7_save(jseq,xdt,f1,msg37)  !Enter decode in table
             endif
          endif
       enddo
+   endif
+
+   if(lft8apon .and. ncontest.ne.6 .and. ncontest.ne.7 .and. nzhsym.eq.50 .and.  &
+        la8 .and. len(trim(hiscall12)).ge.3 .and. len(trim(hisgrid)).ge.4 .and.  &   
+        ltry_a8) then   
+! Try for an a8 decode at nfqso
+      f1=nfqso
+      call timer('ft8_a8d ',0)
+      call ft8_a8d(dd,mycall12,hiscall12,hisgrid,f1,xdt,fbest,xsnr,plog,msg37)
+      call timer('ft8_a8d ',1)
+
+      if(msg37(1:1).ne.' ') then
+         if(associated(this%callback)) then
+            sync=10.0  !### ???
+            nsnr=nint(xsnr)
+            iaptype=8
+            qual=1.0
+            if(plog.lt.-147.0) qual=0.16
+            call this%callback(sync,nsnr,xdt,fbest,msg37,iaptype,qual)
+            call ft8_a7_save(jseq,xdt,f1,msg37)  !Enter decode in the a7 table
+         endif
+      endif
    endif
 
    return

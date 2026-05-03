@@ -43,7 +43,7 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
   end type counting_q65_decoder
 
   real ss(184,NSMAX)
-  logical baddata,newdat65,newdat9,single_decode,bVHF,bad0,newdat,ex
+  logical baddata,newdat65,newdat9,single_decode,bVHF,bad0,newdat,ex,ltry_a8
   logical lprinthash22
   integer*2 id2(NTMAX*12000)
   integer nqf(20)
@@ -141,6 +141,7 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
      endif
 
      call timer('decft8  ',0)
+     ltry_a8=.true.
      newdat=params%newdat
      if(params%emedelay.ne.0.0) then
         id2(1:156000)=id2(24001:180000)  ! Drop the first 2 seconds of data
@@ -150,7 +151,7 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
           params%nftx,newdat,params%nutc,params%nfa,params%nfb,              &
           params%nzhsym,params%ndepth,params%emedelay,ncontest,              &
           logical(params%nagain),logical(params%lft8apon),                   &
-          logical(params%lapcqonly),params%napwid,mycall,hiscall,            &
+          ltry_a8,logical(params%lapcqonly),params%napwid,mycall,hiscall,hisgrid,            &
           params%ndiskdat)
      call timer('decft8  ',1)
      if(nfox.gt.0) then
