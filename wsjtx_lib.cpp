@@ -13,12 +13,20 @@ wsjtx_lib::wsjtx_lib() { fftwf_init_threads(); }
 void wsjtx_lib::setDxCall(const std::string& call) { dx_call_ = call; }
 void wsjtx_lib::setDxGrid(const std::string& grid) { dx_grid_ = grid; }
 
+void wsjtx_lib::setDecodeRange(int lowFreq, int highFreq, int tolerance)
+{
+	decode_low_  = lowFreq;
+	decode_high_ = highFreq;
+	decode_tol_  = tolerance;
+}
+
 bool wsjtx_lib::pullMessage(WsjtxMessage &msg) { return messageQueue_.pull(msg); }
 
 void wsjtx_lib::decode(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int thread)
 {
 	std::unique_ptr<wstjx_decode> ptr = std::make_unique<wstjx_decode>();
 	if (!dx_call_.empty() || !dx_grid_.empty()) ptr->setDxInfo(dx_call_, dx_grid_);
+	ptr->setDecodeRange(decode_low_, decode_high_, decode_tol_);
 	wsjtx_set_message_queue(&messageQueue_);
 	ptr->decode(mode, audiosamples, freq, thread);
 	wsjtx_set_message_queue(nullptr);
@@ -28,6 +36,7 @@ void wsjtx_lib::decode(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, i
 {
 	std::unique_ptr<wstjx_decode> ptr = std::make_unique<wstjx_decode>();
 	if (!dx_call_.empty() || !dx_grid_.empty()) ptr->setDxInfo(dx_call_, dx_grid_);
+	ptr->setDecodeRange(decode_low_, decode_high_, decode_tol_);
 	wsjtx_set_message_queue(&messageQueue_);
 	ptr->decode(mode, audiosamples, freq, thread);
 	wsjtx_set_message_queue(nullptr);
