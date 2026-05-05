@@ -64,8 +64,12 @@ class wsjtx_lib
 	std::vector<decoder_results> wspr_decode(WsjtxIQSampleVector &iqsignal, decoder_options options);
 	void setDxCall(const std::string& call);
 	void setDxGrid(const std::string& grid);
+	void setDecodeRange(int lowFreq, int highFreq, int tolerance);
   private:
 	std::string dx_call_;
 	std::string dx_grid_;
+	int decode_low_  = 200;
+	int decode_high_ = 4000;
+	int decode_tol_  = 20;
 	DataQueue<WsjtxMessage> messageQueue_;
 };
