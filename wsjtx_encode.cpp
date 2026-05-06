@@ -2,6 +2,7 @@
 #include "DataBuffer.h"
 #include "commons.h"
 #include "fortran_interface.h"
+#include <algorithm>
 #include <cstring>
 
 std::vector<float> wsjtx_encode::encode_ft8(wsjtxMode mode, int frequency, std::string message, std::string &msgsent)
@@ -14,7 +15,7 @@ std::vector<float> wsjtx_encode::encode_ft8(wsjtxMode mode, int frequency, std::
 
 	std::memset(msg, 0, 38);
 	std::memset(sendmsg, 0, 38);
-	strcpy(msg, message.c_str());
+	std::copy_n(message.c_str(), std::min<size_t>(message.size(), 37), msg);
 	genft8_(msg, &i3, &n3, sendmsg, const_cast<char *>(ft8msgbits),
 			const_cast<int *>(itone), 37, 37);
 	sendmsg[37] = '\0';
@@ -55,7 +56,7 @@ std::vector<float> wsjtx_encode::encode_ft4(wsjtxMode mode, int frequency, std::
 
 	std::memset(msg, 0, 38);
 	std::memset(sendmsg, 0, 38);
-	strcpy(msg, message.c_str());
+	std::copy_n(message.c_str(), std::min<size_t>(message.size(), 37), msg);
 	genft4_(msg, &ichk, sendmsg, const_cast<char *>(ft4msgbits), const_cast<int *>(itone), 37, 37);
 	sendmsg[37] = '\0';
 	msgsent = std::string(sendmsg);
