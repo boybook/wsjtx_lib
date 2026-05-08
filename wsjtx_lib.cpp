@@ -20,13 +20,31 @@ void wsjtx_lib::setDecodeRange(int lowFreq, int highFreq, int tolerance)
 	decode_tol_  = tolerance;
 }
 
+void wsjtx_lib::setDecodeStationInfo(const std::string& myCall, const std::string& myGrid,
+	const std::string& dxCall, const std::string& dxGrid)
+{
+	my_call_ = myCall;
+	my_grid_ = myGrid;
+	dx_call_ = dxCall;
+	dx_grid_ = dxGrid;
+}
+
+void wsjtx_lib::setDecodeControls(bool apDecode, int decodeDepth, int txFrequency, int qsoProgress)
+{
+	ap_decode_ = apDecode;
+	decode_depth_ = decodeDepth < 1 ? 1 : decodeDepth;
+	tx_frequency_ = txFrequency;
+	qso_progress_ = qsoProgress < 0 ? 0 : qsoProgress;
+}
+
 bool wsjtx_lib::pullMessage(WsjtxMessage &msg) { return messageQueue_.pull(msg); }
 
 void wsjtx_lib::decode(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int thread)
 {
 	std::unique_ptr<wstjx_decode> ptr = std::make_unique<wstjx_decode>();
-	if (!dx_call_.empty() || !dx_grid_.empty()) ptr->setDxInfo(dx_call_, dx_grid_);
+	ptr->setStationInfo(my_call_, my_grid_, dx_call_, dx_grid_);
 	ptr->setDecodeRange(decode_low_, decode_high_, decode_tol_);
+	ptr->setDecodeControls(ap_decode_, decode_depth_, tx_frequency_, qso_progress_);
 	wsjtx_set_message_queue(&messageQueue_);
 	ptr->decode(mode, audiosamples, freq, thread);
 	wsjtx_set_message_queue(nullptr);
@@ -35,8 +53,9 @@ void wsjtx_lib::decode(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int 
 void wsjtx_lib::decode(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, int thread)
 {
 	std::unique_ptr<wstjx_decode> ptr = std::make_unique<wstjx_decode>();
-	if (!dx_call_.empty() || !dx_grid_.empty()) ptr->setDxInfo(dx_call_, dx_grid_);
+	ptr->setStationInfo(my_call_, my_grid_, dx_call_, dx_grid_);
 	ptr->setDecodeRange(decode_low_, decode_high_, decode_tol_);
+	ptr->setDecodeControls(ap_decode_, decode_depth_, tx_frequency_, qso_progress_);
 	wsjtx_set_message_queue(&messageQueue_);
 	ptr->decode(mode, audiosamples, freq, thread);
 	wsjtx_set_message_queue(nullptr);

@@ -65,11 +65,20 @@ class wsjtx_lib
 	void setDxCall(const std::string& call);
 	void setDxGrid(const std::string& grid);
 	void setDecodeRange(int lowFreq, int highFreq, int tolerance);
+	void setDecodeStationInfo(const std::string& myCall, const std::string& myGrid,
+		const std::string& dxCall, const std::string& dxGrid);
+	void setDecodeControls(bool apDecode, int decodeDepth, int txFrequency, int qsoProgress);
   private:
+	std::string my_call_;
+	std::string my_grid_;
 	std::string dx_call_;
 	std::string dx_grid_;
 	int decode_low_  = 200;
 	int decode_high_ = 4000;
 	int decode_tol_  = 20;
+	bool ap_decode_ = true;
+	int decode_depth_ = 1;
+	int tx_frequency_ = 0;
+	int qso_progress_ = 0;
 	DataQueue<WsjtxMessage> messageQueue_;
 };

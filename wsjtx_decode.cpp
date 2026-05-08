@@ -41,26 +41,44 @@ void wsjtx_decoded_fst4_(int *nutc, float *sync, int *snr, float *dt, float *fre
 }
 
 void wstjx_decode::setDxInfo(const std::string& call, const std::string& grid) {
-	if (!call.empty()) std::strncpy(params.hiscall, call.c_str(), 12);
-	if (!grid.empty()) std::strncpy(params.hisgrid, grid.c_str(), 6);
+	dx_call_ = call;
+	dx_grid_ = grid;
+}
+void wstjx_decode::setStationInfo(const std::string& myCall, const std::string& myGrid,
+	const std::string& dxCall, const std::string& dxGrid) {
+	my_call_ = myCall;
+	my_grid_ = myGrid;
+	dx_call_ = dxCall;
+	dx_grid_ = dxGrid;
 }
 void wstjx_decode::setDecodeRange(int low, int high, int tol) { nfa_ = low; nfb_ = high; ntol_ = tol; }
+void wstjx_decode::setDecodeControls(bool apDecode, int decodeDepth, int txFrequency, int qsoProgress) {
+	ap_decode_ = apDecode;
+	decode_depth_ = decodeDepth < 1 ? 1 : decodeDepth;
+	tx_frequency_ = txFrequency;
+	qso_progress_ = qsoProgress < 0 ? 0 : qsoProgress;
+}
 
 void wstjx_decode::decode(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int threads)
 {
 	samplebuffer.push(std::move(audiosamples));
 	std::memset(&params, 0, sizeof(params));
-	params.nmode = 8; params.ntrperiod = 60.0; params.nfqso = freq;
+	params.nmode = 8; params.ntrperiod = 60.0; params.nQSOProgress = qso_progress_;
+	params.nfqso = freq; params.nftx = tx_frequency_;
 	params.newdat = true; params.npts8 = 74736; params.nfa = nfa_;
 	params.nfSplit = 2700; params.nfb = nfb_; params.ntol = ntol_;
 	params.kin = 64800; params.nzhsym = 79; params.nsubmode = 0;
-	params.nagain = false; params.ndepth = 1; params.lft8apon = true;
+	params.nagain = false; params.ndepth = decode_depth_; params.lft8apon = ap_decode_;
 	params.lapcqonly = false; params.ljt65apon = true; params.napwid = 75;
 	params.ntxmode = 65; params.nmode = 8; params.minw = 0;
 	params.nclearave = false; params.minSync = 0; params.emedelay = 0.0;
 	params.dttol = 3; params.nlist = 0; params.listutc[0] = '\0';
 	params.n2pass = 2; params.nranera = 6; params.naggressive = 0;
 	params.nrobust = false; params.nexp_decode = 0;
+	if (!my_call_.empty()) std::strncpy(params.mycall, my_call_.c_str(), sizeof(params.mycall) - 1);
+	if (!my_grid_.empty()) std::strncpy(params.mygrid, my_grid_.c_str(), sizeof(params.mygrid) - 1);
+	if (!dx_call_.empty()) std::strncpy(params.hiscall, dx_call_.c_str(), sizeof(params.hiscall) - 1);
+	if (!dx_grid_.empty()) std::strncpy(params.hisgrid, dx_grid_.c_str(), sizeof(params.hisgrid) - 1);
 	switch (mode) {
 	case FT8: params.nmode = 8; break;
 	case FT4: params.nmode = 5; break;
@@ -80,11 +98,12 @@ void wstjx_decode::decode(wsjtxMode mode, WsjTxVector &audiosamples, int freq, i
 void wstjx_decode::decode(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, int threads)
 {
 	std::memset(&params, 0, sizeof(params));
-	params.nmode = 8; params.ntrperiod = 60.0; params.nfqso = freq;
+	params.nmode = 8; params.ntrperiod = 60.0; params.nQSOProgress = qso_progress_;
+	params.nfqso = freq; params.nftx = tx_frequency_;
 	params.newdat = true; params.npts8 = 74736; params.nfa = nfa_;
 	params.nfSplit = 2700; params.nfb = nfb_; params.ntol = ntol_;
 	params.kin = 64800; params.nzhsym = 50; params.nsubmode = 0;
-	params.nagain = false; params.ndepth = 1; params.lft8apon = true;
+	params.nagain = false; params.ndepth = decode_depth_; params.lft8apon = ap_decode_;
 	params.lapcqonly = false; params.ljt65apon = true; params.napwid = 75;
 	params.ntxmode = 65;
 	switch (mode) {
@@ -96,6 +115,10 @@ void wstjx_decode::decode(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq
 	params.emedelay = 0.0; params.dttol = 3; params.nlist = 0;
 	params.listutc[0] = '\0'; params.n2pass = 2; params.nranera = 6;
 	params.naggressive = 0; params.nrobust = false; params.nexp_decode = 0;
+	if (!my_call_.empty()) std::strncpy(params.mycall, my_call_.c_str(), sizeof(params.mycall) - 1);
+	if (!my_grid_.empty()) std::strncpy(params.mygrid, my_grid_.c_str(), sizeof(params.mygrid) - 1);
+	if (!dx_call_.empty()) std::strncpy(params.hiscall, dx_call_.c_str(), sizeof(params.hiscall) - 1);
+	if (!dx_grid_.empty()) std::strncpy(params.hisgrid, dx_grid_.c_str(), sizeof(params.hisgrid) - 1);
 	int nfsample = 12000;
 	for (size_t i = 0; i < audiosamples.size(); i++)
 		dec_data.d2[i] = (short int)audiosamples[i];
