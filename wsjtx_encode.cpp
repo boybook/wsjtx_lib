@@ -5,7 +5,7 @@
 #include <algorithm>
 #include <cstring>
 
-std::vector<float> wsjtx_encode::encode_ft8(wsjtxMode mode, int frequency, std::string message, std::string &msgsent)
+std::vector<float> wsjtx_encode::encode_ft8(wsjtxMode mode, int frequency, std::string message, std::string &msgsent, int sampleRate)
 {
 	std::vector<float> signal;
 	
@@ -29,8 +29,8 @@ std::vector<float> wsjtx_encode::encode_ft8(wsjtxMode mode, int frequency, std::
 	}
 	printf("\n");
 
-	nsps = 4 * 1920;
-	fsample = 48000.0;
+	nsps = (sampleRate / 12000) * 1920;
+	fsample = static_cast<float>(sampleRate);
 	bt = 2.0;
 	icmplx = 0;
 	nwave = nsym * nsps;
@@ -48,7 +48,7 @@ std::vector<float> wsjtx_encode::encode_ft8(wsjtxMode mode, int frequency, std::
 //void genft4_(char *msg, int *ichk, char *msgsent, char ft4msgbits[], int itone[],
 //			 fortran_charlen_t, fortran_charlen_t);
 
-std::vector<float> wsjtx_encode::encode_ft4(wsjtxMode mode, int frequency, std::string message, std::string &msgsent)
+std::vector<float> wsjtx_encode::encode_ft4(wsjtxMode mode, int frequency, std::string message, std::string &msgsent, int sampleRate)
 {
 	int ichk = 0;
 	char ft4msgbits[101];
@@ -62,8 +62,8 @@ std::vector<float> wsjtx_encode::encode_ft4(wsjtxMode mode, int frequency, std::
 	msgsent = std::string(sendmsg);
 	
 	int nsym = 103;
-	int nsps = 4 * 576;
-	float fsample = 48000.0;
+	int nsps = (sampleRate / 12000) * 576;
+	float fsample = static_cast<float>(sampleRate);
 	float f0 = frequency; //ui->TxFreqSpinBox->value() - m_XIT;
 	int nwave = (nsym + 2) * nsps;
 	int icmplx = 0;

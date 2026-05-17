@@ -12,8 +12,8 @@
 class wsjtx_encode
 {
 	public:
-	  std::vector<float> encode_ft8(wsjtxMode mode, int frequency, std::string message, std::string &msgsent);
-	  std::vector<float> encode_ft4(wsjtxMode mode, int frequency, std::string message, std::string &msgsent);
+	  std::vector<float> encode_ft8(wsjtxMode mode, int frequency, std::string message, std::string &msgsent, int sampleRate);
+	  std::vector<float> encode_ft4(wsjtxMode mode, int frequency, std::string message, std::string &msgsent, int sampleRate);
 	  std::vector<float> encode_wspr(wsjtxMode mode, int frequency, std::string message, std::string &msgsent);
 
 	private:

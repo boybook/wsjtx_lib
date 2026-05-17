@@ -71,16 +71,16 @@ std::vector<struct decoder_results> wsjtx_lib::wspr_decode(WsjtxIQSampleVector &
 	return results;
 }
 
-std::vector<float> wsjtx_lib::encode(wsjtxMode mode, int frequency, std::string message, std::string &messagesend)
+std::vector<float> wsjtx_lib::encode(wsjtxMode mode, int frequency, std::string message, std::string &messagesend, int sampleRate)
 {
 	switch (mode) {
 	case FT8: {
 		auto ptr = std::make_unique<wsjtx_encode>();
-		return ptr->encode_ft8(mode, frequency, message, messagesend);
+		return ptr->encode_ft8(mode, frequency, message, messagesend, sampleRate);
 	}
 	case FT4: {
 		auto ptr = std::make_unique<wsjtx_encode>();
-		return ptr->encode_ft4(mode, frequency, message, messagesend);
+		return ptr->encode_ft4(mode, frequency, message, messagesend, sampleRate);
 	}
 	default: return {};
 	}
