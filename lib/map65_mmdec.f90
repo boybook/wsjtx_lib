@@ -7,7 +7,6 @@ subroutine map65_mmdec(nutc,id2,nqd,nsubmode,nfa,nfb,nfqso,ntol,newdat,   &
   use decode_callbacks, only: map65_q65_decoder, map65_q65_decoded_callback
 
   include 'jt9com.f90'
-  include 'timer_common.inc'
 
   logical single_decode,bVHF,lnewdat,lagain,lclearave,lapcqonly
   integer*2 id2(300*12000)

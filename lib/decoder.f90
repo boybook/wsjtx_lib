@@ -13,7 +13,6 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
        fst4_decoded_callback, q65_decoded_callback
 
   include 'jt9com.f90'
-  include 'timer_common.inc'
 
   real ss(184,NSMAX)
   logical baddata,newdat65,newdat9,single_decode,bVHF,bad0,newdat,ex,ltry_a8
