@@ -25,7 +25,8 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
   character(len=12) :: mycall, hiscall
   character(len=6) :: mygrid, hisgrid
   character*60 line
-  data ndec8/0/,ntr0/-1/
+  external wsjtx_decode_stats
+  data ndec8/0/,ntr0/-1/,ndec41/0/,ndec47/0/
   save
   type(counting_jt4_decoder) :: my_jt4
   type(counting_jt65_decoder) :: my_jt65
@@ -35,11 +36,27 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
   type(counting_fst4_decoder) :: my_fst4
   type(counting_q65_decoder) :: my_q65
 
+  my_jt4%decoded = 0
+  my_jt65%decoded = 0
+  my_jt9%decoded = 0
+  my_ft8%decoded = 0
+  my_ft4%decoded = 0
+  my_fst4%decoded = 0
+  my_q65%decoded = 0
+  nsynced=0
+  navg0=0
+  if(params%nmode.eq.8 .and. params%nzhsym.eq.41) then
+     ndec41=0
+     ndec47=0
+  endif
+
   if(.not.params%newdat .and. params%ntr.gt.ntr0) go to 800
   ntr0=params%ntr
   rms=sqrt(dot_product(float(id2(1:180000)),                         &
        float(id2(1:180000)))/180000.0)
-  if(rms.lt.3.0) go to 800
+  ! Match WSJT-X 3.0.2: the input gate is 0.5 counts. Higher thresholds
+  ! discard low-gain recordings before FT8/FT4 can attempt a decode.
+  if(rms.lt.0.5) go to 800
 
   !cast C character arrays to Fortran character strings
   datetime=transfer(params%datetime, datetime)
@@ -373,6 +390,7 @@ subroutine multimode_decoder(ss,id2,params,nfsample)
   if(params%nmode.eq.8 .and. params%nzhsym.eq.50) then
      ndecoded=ndec41+ndec47+ndecoded
   endif
+  call wsjtx_decode_stats(params%nzhsym,nsynced,ndecoded,navg0)
   if(params%nmode.ne.8 .or. params%nzhsym.eq.50 .or.                     &
        .not.params%ndiskdat) then
 

@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <complex>
+#include <mutex>
 #include "DataBuffer.h"
 
 typedef std::vector<float> WsjTxVector;
@@ -39,6 +40,42 @@ class decoder_options
 
 enum wsjtxMode { FT8, FT4, JT4, JT65, JT9, FST4, Q65, FST4W, JT65JT9, WSPR };
 
+struct wsjtx_decode_stage_t {
+	int stage_symbols;
+	int slot_utc;
+	bool reset_state;
+	bool nagain;
+	int eme_delay_ms;
+	std::string session_id;
+};
+
+struct WsjtxDecodeStats {
+	int stage_symbols = 50;
+	int candidate_count = 0;
+	int decoded_count = 0;
+	int average_count = 0;
+};
+
+WsjtxDecodeStats wsjtx_last_stats();
+
+/* An atomic decode invocation configuration.  The C API uses this to apply
+ * all station, range, AP, depth, and stage fields under the same decoder
+ * mutex as the native call. */
+struct WsjtxDecodeConfig {
+	int low_freq = 200;
+	int high_freq = 4000;
+	int tolerance = 20;
+	bool ap_decode = true;
+	int decode_depth = 1;
+	int tx_frequency = 0;
+	int qso_progress = 0;
+	std::string my_call;
+	std::string my_grid;
+	std::string dx_call;
+	std::string dx_grid;
+	wsjtx_decode_stage_t stage;
+};
+
 class WsjtxMessage
 {
   public:
@@ -59,6 +96,14 @@ class wsjtx_lib
 	wsjtx_lib();
 	void decode(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int thread = 1);
 	void decode(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, int thread = 1);
+	void decodeWithOptions(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int thread,
+		const WsjtxDecodeConfig& config);
+	void decodeWithOptions(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, int thread,
+		const WsjtxDecodeConfig& config);
+	void decodeWithOptionsAndPull(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int thread,
+		const WsjtxDecodeConfig& config, std::vector<WsjtxMessage>& messages);
+	void decodeWithOptionsAndPull(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, int thread,
+		const WsjtxDecodeConfig& config, std::vector<WsjtxMessage>& messages);
 	std::vector<float> encode(wsjtxMode mode, int frequency, std::string message, std::string &messagesend, int sampleRate);
 	bool pullMessage(WsjtxMessage &msg);
 	std::vector<decoder_results> wspr_decode(WsjtxIQSampleVector &iqsignal, decoder_options options);
@@ -68,6 +113,8 @@ class wsjtx_lib
 	void setDecodeStationInfo(const std::string& myCall, const std::string& myGrid,
 		const std::string& dxCall, const std::string& dxGrid);
 	void setDecodeControls(bool apDecode, int decodeDepth, int txFrequency, int qsoProgress);
+	void setDecodeStage(const wsjtx_decode_stage_t& stage);
+	void endDecodeSession(const std::string& sessionId);
   private:
 	std::string my_call_;
 	std::string my_grid_;
@@ -81,4 +128,18 @@ class wsjtx_lib
 	int tx_frequency_ = 0;
 	int qso_progress_ = 0;
 	DataQueue<WsjtxMessage> messageQueue_;
+	std::mutex decodeMutex_;
+	std::string activeSessionId_;
+	wsjtxMode activeSessionMode_ = FT8;
+	int activeSessionStage_ = 0;
+	int activeSessionUtc_ = -1;
+	int stageSymbols_ = 50;
+	int slotUtc_ = -1;
+	bool resetState_ = true;
+	bool nagain_ = false;
+	int emeDelayMs_ = 0;
+	bool sessionConfigured_ = false;
+	void setDecodeStageLocked(const wsjtx_decode_stage_t& stage);
+	void decodeLocked(wsjtxMode mode, WsjTxVector &audiosamples, int freq, int thread);
+	void decodeLocked(wsjtxMode mode, IntWsjTxVector &audiosamples, int freq, int thread);
 };

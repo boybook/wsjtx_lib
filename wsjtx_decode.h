@@ -17,6 +17,7 @@ class wstjx_decode
 		const std::string& dxCall, const std::string& dxGrid);
 	void setDecodeRange(int low, int high, int tol);
 	void setDecodeControls(bool apDecode, int decodeDepth, int txFrequency, int qsoProgress);
+	void setDecodeStage(const wsjtx_decode_stage_t& stage);
   private:
 	params_t params;
 	DataBuffer<float> samplebuffer;
@@ -28,4 +29,10 @@ class wstjx_decode
 	int qso_progress_ = 0;
 	std::string my_call_, my_grid_;
 	std::string dx_call_, dx_grid_;
+	int stage_symbols_ = 50;
+	int slot_utc_ = -1;
+	bool reset_state_ = true;
+	bool nagain_ = false;
+	int eme_delay_ms_ = 0;
+	std::string session_id_;
 };

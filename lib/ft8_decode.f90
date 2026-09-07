@@ -39,6 +39,7 @@ contains
     use timer_module, only: timer
     use shmem, only: shmem_lock, shmem_unlock
     use ft8_a7
+    external wsjtx_decode_candidates
 
     include 'ft8/ft8_params.f90'
 
@@ -198,6 +199,7 @@ contains
       call timer('sync8   ',0)
       maxc=MAXCAND
       call sync8(dd,NPTS,ifa,ifb,syncmin,nfqso,maxc,candidate,ncand,sbase)
+      call wsjtx_decode_candidates(ncand)
       call timer('sync8   ',1)
       do icand=1,ncand
         sync=candidate(3,icand)
